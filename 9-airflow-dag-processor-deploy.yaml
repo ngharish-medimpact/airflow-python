@@ -1,0 +1,154 @@
+# Source: airflow/templates/dag-processor/dag-processor-deployment.yaml
+################################
+## Airflow Dag Processor Deployment
+#################################
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: airflow-dag-processor
+  labels:
+    tier: airflow
+    component: dag-processor
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      tier: airflow
+      component: dag-processor
+  strategy:
+    rollingUpdate:
+      maxSurge: 100%
+      maxUnavailable: 50%
+  template:
+    metadata:
+      labels:
+        tier: airflow
+        component: dag-processor
+    spec:
+      terminationGracePeriodSeconds: 60
+      restartPolicy: Always
+      serviceAccountName: "pdp-default"
+      securityContext:
+        runAsUser: 50000
+        fsGroup: 0
+      initContainers:
+        - name: dag-fetcher
+          image: docker-local.artifactory.medimpact.com/com/medimpact/pdp/medgen-dags-python:0.0.6
+          imagePullPolicy: Always
+          command:
+            - "rsync"
+            - "-av"
+            - "/source_files/dags/"
+            - "/dags/"
+          volumeMounts:
+            - name: dags-volume
+              mountPath: "/dags"
+        - name: wait-for-airflow-migrations
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "1Gi"
+            limits:
+              cpu: "1"
+              memory: "2Gi"
+          image: docker-local.artifactory.medimpact.com/dockerhub/apache/airflow:slim-3.0.2
+          imagePullPolicy: IfNotPresent
+          command:
+            - "/bin/bash"
+            - "-c"
+            - |
+              exec /entrypoint airflow db check-migrations --migration-wait-timeout=60
+          envFrom:
+            - secretRef:
+                name: airflow-database-secret
+          env:
+            - name: AIRFLOW__DATABASE__SQL_ALCHEMY_CONN
+              valueFrom:
+                secretKeyRef:
+                  name: airflow-database-secret
+                  key: connection
+      containers:
+        - name: dag-processor
+          image: docker-local.artifactory.medimpact.com/dockerhub/apache/airflow:slim-3.0.2
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          args:
+            - bash
+            - -c
+            - exec airflow dag-processor
+          resources:
+            {}
+          volumeMounts:
+            - name: dags-volume
+              mountPath: "/opt/airflow/dags"
+            - name: logs
+              mountPath: "/opt/airflow/logs"
+            - name: config
+              mountPath: "/opt/airflow/airflow.cfg"
+              subPath: airflow.cfg
+              readOnly: true
+            - name: config
+              mountPath: "/opt/airflow/config/airflow_local_settings.py"
+              subPath: airflow_local_settings.py
+              readOnly: true
+          envFrom:
+            - secretRef:
+                name: airflow-database-secret
+          env:
+            - name: AIRFLOW__DATABASE__SQL_ALCHEMY_CONN
+              valueFrom:
+                secretKeyRef:
+                  name: airflow-database-secret
+                  key: connection
+            - name: AIRFLOW__CELERY__BROKER_URL
+              valueFrom:
+                secretKeyRef:
+                  name: airflow-broker-url
+                  key: connection
+          livenessProbe:
+            initialDelaySeconds: 10
+            timeoutSeconds: 20
+            failureThreshold: 5
+            periodSeconds: 60
+            exec:
+              command:
+                - sh
+                - -c
+                - |
+                  CONNECTION_CHECK_MAX_COUNT=0 AIRFLOW__LOGGING__LOGGING_LEVEL=ERROR exec /entrypoint \
+                  airflow jobs check --local --job-type DagProcessorJob
+        - name: dag-processor-log-groomer
+          image: docker-local.artifactory.medimpact.com/dockerhub/apache/airflow:slim-3.0.2
+          imagePullPolicy: IfNotPresent
+          resources:
+            {}
+          args:
+            - "bash"
+            - "-c"
+            - |
+              exec \
+              airflow jobs check --local --job-type DagProcessorJob --hostname $(hostname)
+          volumeMounts:
+            - name: logs
+              mountPath: "/opt/airflow/logs"
+            - name: config
+              mountPath: "/opt/airflow/airflow.cfg"
+              subPath: airflow.cfg
+              readOnly: true
+            - name: config
+              mountPath: "/opt/airflow/config/airflow_local_settings.py"
+              subPath: airflow_local_settings.py
+              readOnly: true
+      volumes:
+        - name: dags-volume
+          persistentVolumeClaim:
+            claimName: pdp-specialty-dev
+        - name: config
+          configMap:
+            name: airflow-config
+        - name: logs
+          emptyDir: {}

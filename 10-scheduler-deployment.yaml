@@ -1,0 +1,168 @@
+# Source: airflow/templates/scheduler/scheduler-deployment.yaml
+################################
+## Airflow Scheduler Deployment/StatefulSet
+#################################
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: airflow-scheduler
+  labels:
+    tier: airflow
+    component: scheduler
+    executor: "CeleryExecutor"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      tier: airflow
+      component: scheduler
+      release: airflow
+  template:
+    metadata:
+      labels:
+        tier: airflow
+        component: scheduler
+        release: airflow
+      # annotations:
+      #   checksum/configmap: 5873919b552e6912c3de9638c4c348f95c27633e3a891787d559a441a3910ffb
+      #   checksum/secrets: ~
+    spec:
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 10
+      serviceAccountName: "airflow-scheduler"
+      securityContext:
+        runAsUser: 50000
+        fsGroup: 0
+      initContainers:
+        - name: dag-fetcher
+          image: docker-local.artifactory.medimpact.com/com/medimpact/pdp/medgen-dags-python:0.0.6
+          imagePullPolicy: Always
+          command:
+            - "rsync"
+            - "-av"
+            - "/source_files/dags/"
+            - "/dags/"
+          volumeMounts:
+            - name: dags-volume
+              mountPath: "/dags"
+        - name: wait-for-airflow-migrations
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "1Gi"
+            limits:
+              cpu: "1"
+              memory: "2Gi"
+          image: docker-local.artifactory.medimpact.com/dockerhub/apache/airflow:slim-3.0.2
+          imagePullPolicy: IfNotPresent
+          command:
+            - "/bin/bash"
+            - "-c"
+            - |
+              exec /entrypoint airflow db check-migrations --migration-wait-timeout=60
+          envFrom:
+            - secretRef:
+                name: airflow-database-secret
+          env:
+            - name: AIRFLOW__DATABASE__SQL_ALCHEMY_CONN
+              valueFrom:
+                secretKeyRef:
+                  name: airflow-database-secret
+                  key: connection
+      containers:
+        - name: scheduler
+          image: docker-local.artifactory.medimpact.com/dockerhub/apache/airflow:slim-3.0.2
+          imagePullPolicy: IfNotPresent
+          args:
+            - "bash"
+            - "-c"
+            - "exec airflow scheduler"
+          resources:
+            {}
+          volumeMounts:
+            - name: dags-volume
+              mountPath: "/opt/airflow/dags"
+            - name: config
+              mountPath: /opt/airflow/pod_templates/pod_template_file.yaml
+              subPath: pod_template_file.yaml
+              readOnly: true
+            - name: logs
+              mountPath: "/opt/airflow/logs"
+            - name: config
+              mountPath: "/opt/airflow/airflow.cfg"
+              subPath: airflow.cfg
+              readOnly: true
+            - name: config
+              mountPath: "/opt/airflow/config/airflow_local_settings.py"
+              subPath: airflow_local_settings.py
+              readOnly: true
+          envFrom:
+            - secretRef:
+                name: airflow-database-secret
+          env:
+            - name: AIRFLOW__DATABASE__SQL_ALCHEMY_CONN
+              valueFrom:
+                secretKeyRef:
+                  name: airflow-database-secret
+                  key: connection
+            - name: AIRFLOW__CELERY__BROKER_URL
+              valueFrom:
+                secretKeyRef:
+                  name: airflow-broker-url
+                  key: connection
+          livenessProbe:
+            initialDelaySeconds: 10
+            timeoutSeconds: 20
+            failureThreshold: 5
+            periodSeconds: 60
+            exec:
+              command:
+                - sh
+                - -c
+                - |
+                  CONNECTION_CHECK_MAX_COUNT=0 AIRFLOW__LOGGING__LOGGING_LEVEL=ERROR exec /entrypoint \
+                  airflow jobs check --local --job-type SchedulerJob
+          startupProbe:
+            initialDelaySeconds: 15
+            timeoutSeconds: 20
+            failureThreshold: 10
+            periodSeconds: 60
+            exec:
+              command:
+                - sh
+                - -c
+                - |
+                  CONNECTION_CHECK_MAX_COUNT=0 AIRFLOW__LOGGING__LOGGING_LEVEL=ERROR exec /entrypoint \
+                  airflow jobs check --local --job-type SchedulerJob
+        - name: scheduler-log-groomer
+          image: docker-local.artifactory.medimpact.com/dockerhub/apache/airflow:slim-3.0.2
+          imagePullPolicy: IfNotPresent
+          resources:
+            {}
+          args:
+            - "bash"
+            - "-c"
+            - |
+              sleep 60
+              exec \
+              airflow jobs check --local --job-type SchedulerJob --hostname $(hostname)
+          volumeMounts:
+            - name: logs
+              mountPath: "/opt/airflow/logs"
+            - name: config
+              mountPath: "/opt/airflow/airflow.cfg"
+              subPath: airflow.cfg
+              readOnly: true
+            - name: config
+              mountPath: "/opt/airflow/config/airflow_local_settings.py"
+              subPath: airflow_local_settings.py
+              readOnly: true
+      volumes:
+        - name: dags-volume
+          persistentVolumeClaim:
+            claimName: pdp-specialty-dev
+        - name: config
+          configMap:
+            name: airflow-config
+        - name: logs
+          emptyDir: {}

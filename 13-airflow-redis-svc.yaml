@@ -1,0 +1,21 @@
+# Source: airflow/templates/redis/redis-service.yaml
+################################
+## Airflow Redis Service
+#################################
+apiVersion: v1
+kind: Service
+metadata:
+  name: airflow-redis
+  labels:
+    tier: airflow
+    component: redis
+spec:
+  type: ClusterIP
+  selector:
+    tier: airflow
+    component: redis
+  ports:
+    - name: redis-db
+      protocol: TCP
+      port: 6379
+      targetPort: 6379
