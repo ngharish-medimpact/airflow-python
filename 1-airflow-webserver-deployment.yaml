@@ -24,6 +24,18 @@ spec:
         runAsUser: 50000 # Airflow user ID
         fsGroup: 0
       initContainers:
+        - name: dag-fetcher
+          image: docker-local.artifactory.medimpact.com/com/medimpact/pdp/medgen-dags-python:0.0.6
+          imagePullPolicy: Always
+          command:
+            - "rsync"
+            - "-av"
+            - "--no-times"
+            - "/source_files/dags/"
+            - "/dags/"
+          volumeMounts:
+            - name: dags-volume
+              mountPath: "/dags"
         - name: wait-for-airflow-migrations
           image: docker-local.artifactory.medimpact.com/dockerhub/apache/airflow:slim-3.0.2
           imagePullPolicy: Always
