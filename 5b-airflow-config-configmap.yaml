@@ -13,9 +13,13 @@ data:
     flower_url_prefix =
     worker_concurrency = 16
     broker_url = ${AIRFLOW__CELERY__BROKER_URL}
+    # result_backend will be set via AIRFLOW__CELERY__RESULT_BACKEND environment variable
 
     [celery_kubernetes_executor]
     kubernetes_queue = kubernetes
+
+    [database] # Changed from [core] for sql_alchemy_conn as per modern practice
+    sql_alchemy_conn = sqlite:////opt/airflow/airflow.db
 
     [core]
     auth_manager = airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager
@@ -25,7 +29,6 @@ data:
     executor = CeleryExecutor
     load_examples = False
     remote_logging = False
-    sql_alchemy_conn = ${AIRFLOW__DATABASE__SQL_ALCHEMY_CONN}
 
     [elasticsearch]
     json_format = True

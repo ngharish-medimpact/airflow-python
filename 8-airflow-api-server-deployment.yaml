@@ -1,3 +1,7 @@
+# Source: airflow/templates/api-server/api-server-deployment.yaml
+################################
+## Airflow API Server Deployment
+#################################
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -72,20 +76,11 @@ spec:
               value: /opt/airflow
             # For Airflow <2.3, backward compatibility; moved to [database] in 2.3
             - name: AIRFLOW__CORE__SQL_ALCHEMY_CONN
-              valueFrom:
-                secretKeyRef:
-                  name: airflow-oracle-conn-secret
-                  key: connection
+              value: sqlite:////opt/airflow/airflow.db
             - name: AIRFLOW__DATABASE__SQL_ALCHEMY_CONN
-              valueFrom:
-                secretKeyRef:
-                  name: airflow-oracle-conn-secret
-                  key: connection
+              value: sqlite:////opt/airflow/airflow.db
             - name: AIRFLOW_CONN_AIRFLOW_DB
-              valueFrom:
-                secretKeyRef:
-                  name: airflow-oracle-conn-secret
-                  key: connection
+              value: sqlite:////opt/airflow/airflow.db
             - name: AIRFLOW__WEBSERVER__SECRET_KEY
               valueFrom:
                 secretKeyRef:
@@ -174,20 +169,18 @@ spec:
               value: /opt/airflow
             # For Airflow <2.3, backward compatibility; moved to [database] in 2.3
             - name: AIRFLOW__CORE__SQL_ALCHEMY_CONN
-              valueFrom:
-                secretKeyRef:
-                  name: airflow-oracle-conn-secret
-                  key: connection
+              value: sqlite:////opt/airflow/airflow.db
             - name: AIRFLOW__DATABASE__SQL_ALCHEMY_CONN
-              valueFrom:
-                secretKeyRef:
-                  name: airflow-oracle-conn-secret
-                  key: connection
+              value: sqlite:////opt/airflow/airflow.db
             - name: AIRFLOW_CONN_AIRFLOW_DB
+              value: sqlite:////opt/airflow/airflow.db
+            - name: REDIS_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: airflow-oracle-conn-secret
-                  key: connection
+                  name: airflow-redis-password
+                  key: password
+            - name: AIRFLOW__CELERY__RESULT_BACKEND
+              value: "db+redis://:$(REDIS_PASSWORD)@airflow-redis:6379/1"
             - name: AIRFLOW__WEBSERVER__SECRET_KEY
               valueFrom:
                 secretKeyRef:
