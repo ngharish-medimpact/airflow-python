@@ -36,6 +36,7 @@ spec:
             - "rsync"
             - "-av"
             - "--no-times"
+            - "--no-perms"
             - "/source_files/dags/"
             - "/dags/"
           volumeMounts:
@@ -58,10 +59,7 @@ spec:
               exec /entrypoint airflow db check-migrations --migration-wait-timeout=60
           env:
             - name: AIRFLOW__DATABASE__SQL_ALCHEMY_CONN
-              valueFrom:
-                secretKeyRef:
-                  name: airflow-oracle-conn-secret
-                  key: connection
+              value: sqlite:////opt/airflow/airflow.db
       containers:
         - name: scheduler
           image: docker-local.artifactory.medimpact.com/dockerhub/apache/airflow:slim-3.0.2
@@ -91,10 +89,14 @@ spec:
               readOnly: true
           env:
             - name: AIRFLOW__DATABASE__SQL_ALCHEMY_CONN
+              value: sqlite:////opt/airflow/airflow.db
+            - name: REDIS_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: airflow-oracle-conn-secret
-                  key: connection
+                  name: airflow-redis-password
+                  key: password
+            - name: AIRFLOW__CELERY__RESULT_BACKEND
+              value: "db+redis://:$(REDIS_PASSWORD)@airflow-redis:6379/1"
             - name: AIRFLOW__CELERY__BROKER_URL
               valueFrom:
                 secretKeyRef:
