@@ -1,17 +1,11 @@
-# Source: airflow/templates/workers/worker-deployment.yaml
-################################
-## Airflow Worker Deployment
-#################################
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: airflow-worker
+  namespace: pdp-dev
   labels:
     tier: airflow
     component: worker
-    release: airflow
-    chart: "airflow-1.9.0"
-    heritage: "Helm"
 spec:
   serviceName: airflow-worker
   replicas: 1
@@ -55,25 +49,22 @@ spec:
               cpu: "1"
               memory: "2Gi"
           image: docker-local.artifactory.medimpact.com/dockerhub/apache/airflow:slim-3.0.2
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           command:
             - "/bin/bash"
             - "-c"
             - |
               exec /entrypoint airflow db check-migrations --migration-wait-timeout=60
-          envFrom:
-            - secretRef:
-                name: airflow-database-secret
           env:
             - name: AIRFLOW__DATABASE__SQL_ALCHEMY_CONN
               valueFrom:
                 secretKeyRef:
-                  name: airflow-database-secret
+                  name: airflow-oracle-conn-secret
                   key: connection
       containers:
         - name: worker
           image: docker-local.artifactory.medimpact.com/dockerhub/apache/airflow:slim-3.0.2
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           args:
             - "bash"
             - "-c"
@@ -113,14 +104,11 @@ spec:
               mountPath: "/opt/airflow/config/airflow_local_settings.py"
               subPath: airflow_local_settings.py
               readOnly: true
-          envFrom:
-            - secretRef:
-                name: airflow-database-secret
           env:
             - name: AIRFLOW__DATABASE__SQL_ALCHEMY_CONN
               valueFrom:
                 secretKeyRef:
-                  name: airflow-database-secret
+                  name: airflow-oracle-conn-secret
                   key: connection
             - name: AIRFLOW__CELERY__BROKER_URL
               valueFrom:
@@ -129,7 +117,7 @@ spec:
                   key: connection
         - name: worker-log-groomer
           image: docker-local.artifactory.medimpact.com/dockerhub/apache/airflow:slim-3.0.2
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           resources:
             {}
           args:

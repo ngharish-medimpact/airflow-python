@@ -1,11 +1,8 @@
-# Source: airflow/templates/scheduler/scheduler-deployment.yaml
-################################
-## Airflow Scheduler Deployment/StatefulSet
-#################################
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: airflow-scheduler
+  namespace: pdp-dev
   labels:
     tier: airflow
     component: scheduler
@@ -16,13 +13,11 @@ spec:
     matchLabels:
       tier: airflow
       component: scheduler
-      release: airflow
   template:
     metadata:
       labels:
         tier: airflow
         component: scheduler
-        release: airflow
       # annotations:
       #   checksum/configmap: 5873919b552e6912c3de9638c4c348f95c27633e3a891787d559a441a3910ffb
       #   checksum/secrets: ~
@@ -54,25 +49,22 @@ spec:
               cpu: "1"
               memory: "2Gi"
           image: docker-local.artifactory.medimpact.com/dockerhub/apache/airflow:slim-3.0.2
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           command:
             - "/bin/bash"
             - "-c"
             - |
               exec /entrypoint airflow db check-migrations --migration-wait-timeout=60
-          envFrom:
-            - secretRef:
-                name: airflow-database-secret
           env:
             - name: AIRFLOW__DATABASE__SQL_ALCHEMY_CONN
               valueFrom:
                 secretKeyRef:
-                  name: airflow-database-secret
+                  name: airflow-oracle-conn-secret
                   key: connection
       containers:
         - name: scheduler
           image: docker-local.artifactory.medimpact.com/dockerhub/apache/airflow:slim-3.0.2
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           args:
             - "bash"
             - "-c"
@@ -96,14 +88,11 @@ spec:
               mountPath: "/opt/airflow/config/airflow_local_settings.py"
               subPath: airflow_local_settings.py
               readOnly: true
-          envFrom:
-            - secretRef:
-                name: airflow-database-secret
           env:
             - name: AIRFLOW__DATABASE__SQL_ALCHEMY_CONN
               valueFrom:
                 secretKeyRef:
-                  name: airflow-database-secret
+                  name: airflow-oracle-conn-secret
                   key: connection
             - name: AIRFLOW__CELERY__BROKER_URL
               valueFrom:
@@ -136,7 +125,7 @@ spec:
                   airflow jobs check --local --job-type SchedulerJob
         - name: scheduler-log-groomer
           image: docker-local.artifactory.medimpact.com/dockerhub/apache/airflow:slim-3.0.2
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           resources:
             {}
           args:

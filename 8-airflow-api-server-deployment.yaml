@@ -1,11 +1,8 @@
-# Source: airflow/templates/api-server/api-server-deployment.yaml
-################################
-## Airflow API Server Deployment
-#################################
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: airflow-api-server
+  namespace: pdp-dev
   labels:
     tier: airflow
     component: api-server
@@ -41,7 +38,7 @@ spec:
       initContainers:
         - name: wait-for-airflow-migrations
           image: docker-local.artifactory.medimpact.com/dockerhub/apache/airflow:slim-3.0.2
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           securityContext: 
             allowPrivilegeEscalation: false
             capabilities:
@@ -77,17 +74,17 @@ spec:
             - name: AIRFLOW__CORE__SQL_ALCHEMY_CONN
               valueFrom:
                 secretKeyRef:
-                  name: airflow-metadata
+                  name: airflow-oracle-conn-secret
                   key: connection
             - name: AIRFLOW__DATABASE__SQL_ALCHEMY_CONN
               valueFrom:
                 secretKeyRef:
-                  name: airflow-metadata
+                  name: airflow-oracle-conn-secret
                   key: connection
             - name: AIRFLOW_CONN_AIRFLOW_DB
               valueFrom:
                 secretKeyRef:
-                  name: airflow-metadata
+                  name: airflow-oracle-conn-secret
                   key: connection
             - name: AIRFLOW__WEBSERVER__SECRET_KEY
               valueFrom:
@@ -107,7 +104,7 @@ spec:
       containers:
         - name: api-server
           image: docker-local.artifactory.medimpact.com/dockerhub/apache/airflow:slim-3.0.2
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           securityContext: 
             allowPrivilegeEscalation: false
             capabilities:
@@ -179,17 +176,17 @@ spec:
             - name: AIRFLOW__CORE__SQL_ALCHEMY_CONN
               valueFrom:
                 secretKeyRef:
-                  name: airflow-metadata
+                  name: airflow-oracle-conn-secret
                   key: connection
             - name: AIRFLOW__DATABASE__SQL_ALCHEMY_CONN
               valueFrom:
                 secretKeyRef:
-                  name: airflow-metadata
+                  name: airflow-oracle-conn-secret
                   key: connection
             - name: AIRFLOW_CONN_AIRFLOW_DB
               valueFrom:
                 secretKeyRef:
-                  name: airflow-metadata
+                  name: airflow-oracle-conn-secret
                   key: connection
             - name: AIRFLOW__WEBSERVER__SECRET_KEY
               valueFrom:
