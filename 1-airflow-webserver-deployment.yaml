@@ -31,6 +31,7 @@ spec:
             - "rsync"
             - "-av"
             - "--no-times"
+            - "--no-perms"
             - "/source_files/dags/"
             - "/dags/"
           volumeMounts:
