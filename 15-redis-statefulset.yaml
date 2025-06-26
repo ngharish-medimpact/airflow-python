@@ -1,11 +1,8 @@
-# Source: airflow/templates/redis/redis-statefulset.yaml
-################################
-## Airflow Redis StatefulSet
-#################################
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: airflow-redis
+  namespace: pdp-dev
   labels:
     tier: airflow
     component: redis

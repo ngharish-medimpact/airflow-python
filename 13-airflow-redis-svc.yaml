@@ -1,11 +1,8 @@
-# Source: airflow/templates/redis/redis-service.yaml
-################################
-## Airflow Redis Service
-#################################
 apiVersion: v1
 kind: Service
 metadata:
   name: airflow-redis
+  namespace: pdp-dev
   labels:
     tier: airflow
     component: redis
