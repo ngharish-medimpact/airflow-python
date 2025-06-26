@@ -141,8 +141,7 @@ spec:
               readOnly: true
       volumes:
         - name: dags-volume
-          persistentVolumeClaim:
-            claimName: pdp-specialty-dev
+          emptyDir: {}
         - name: config
           configMap:
             name: airflow-config
