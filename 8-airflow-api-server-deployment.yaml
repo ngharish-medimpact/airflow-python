@@ -67,6 +67,15 @@ spec:
             # Dynamically created secret envs
             # Extra env          
             # Hard Coded Airflow Envs
+            - name: AIRFLOW__CORE__EXECUTOR
+              value: CeleryExecutor
+            - name: AIRFLOW__CORE__LOAD_EXAMPLES
+              value: "False"
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: airflow-postgres-creds
+                  key: postgres_password
             - name: AIRFLOW__CORE__FERNET_KEY
               valueFrom:
                 secretKeyRef:
@@ -76,11 +85,11 @@ spec:
               value: /opt/airflow
             # For Airflow <2.3, backward compatibility; moved to [database] in 2.3
             - name: AIRFLOW__CORE__SQL_ALCHEMY_CONN
-              value: sqlite:////opt/airflow/airflow.db
+              value: postgresql+psycopg2://airflow_user:$(POSTGRES_PASSWORD)@devedb0-vip.medimpact.com:5432/pdp_airflow_db
             - name: AIRFLOW__DATABASE__SQL_ALCHEMY_CONN
-              value: sqlite:////opt/airflow/airflow.db
+              value: postgresql+psycopg2://airflow_user:$(POSTGRES_PASSWORD)@devedb0-vip.medimpact.com:5432/pdp_airflow_db
             - name: AIRFLOW_CONN_AIRFLOW_DB
-              value: sqlite:////opt/airflow/airflow.db
+              value: postgresql+psycopg2://airflow_user:$(POSTGRES_PASSWORD)@devedb0-vip.medimpact.com:5432/pdp_airflow_db
             - name: AIRFLOW__WEBSERVER__SECRET_KEY
               valueFrom:
                 secretKeyRef:
@@ -160,6 +169,15 @@ spec:
             # Dynamically created secret envs
             # Extra env          
             # Hard Coded Airflow Envs
+            - name: AIRFLOW__CORE__EXECUTOR
+              value: CeleryExecutor
+            - name: AIRFLOW__CORE__LOAD_EXAMPLES
+              value: "False"
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: airflow-postgres-creds
+                  key: postgres_password
             - name: AIRFLOW__CORE__FERNET_KEY
               valueFrom:
                 secretKeyRef:
@@ -169,11 +187,11 @@ spec:
               value: /opt/airflow
             # For Airflow <2.3, backward compatibility; moved to [database] in 2.3
             - name: AIRFLOW__CORE__SQL_ALCHEMY_CONN
-              value: sqlite:////opt/airflow/airflow.db
+              value: postgresql+psycopg2://airflow_user:$(POSTGRES_PASSWORD)@devedb0-vip.medimpact.com:5432/pdp_airflow_db
             - name: AIRFLOW__DATABASE__SQL_ALCHEMY_CONN
-              value: sqlite:////opt/airflow/airflow.db
+              value: postgresql+psycopg2://airflow_user:$(POSTGRES_PASSWORD)@devedb0-vip.medimpact.com:5432/pdp_airflow_db
             - name: AIRFLOW_CONN_AIRFLOW_DB
-              value: sqlite:////opt/airflow/airflow.db
+              value: postgresql+psycopg2://airflow_user:$(POSTGRES_PASSWORD)@devedb0-vip.medimpact.com:5432/pdp_airflow_db
             - name: REDIS_PASSWORD
               valueFrom:
                 secretKeyRef:
