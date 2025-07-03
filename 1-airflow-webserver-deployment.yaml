@@ -45,8 +45,13 @@ spec:
             - "-c"
             - "exec airflow db check-migrations --migration-wait-timeout=60"
           env:
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: airflow-postgres-creds
+                  key: postgres_password
             - name: AIRFLOW__DATABASE__SQL_ALCHEMY_CONN
-              value: sqlite:////opt/airflow/airflow.db
+              value: postgresql+psycopg2://airflow_user:$(POSTGRES_PASSWORD)@devedb0-vip.medimpact.com:5432/pdp_airflow_db
           resources:
             requests:
               cpu: "100m"
@@ -69,9 +74,16 @@ spec:
             - name: AIRFLOW_HOME
               value: /opt/airflow
             - name: AIRFLOW__CORE__EXECUTOR
-              value: CeleryExecutor # Matching the rest of the config
+              value: CeleryExecutor
+            - name: AIRFLOW__CORE__LOAD_EXAMPLES
+              value: "False"
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: airflow-postgres-creds
+                  key: postgres_password
             - name: AIRFLOW__DATABASE__SQL_ALCHEMY_CONN
-              value: sqlite:////opt/airflow/airflow.db
+              value: postgresql+psycopg2://airflow_user:$(POSTGRES_PASSWORD)@devedb0-vip.medimpact.com:5432/pdp_airflow_db
             - name: REDIS_PASSWORD # Add REDIS_PASSWORD env var
               valueFrom:
                 secretKeyRef:

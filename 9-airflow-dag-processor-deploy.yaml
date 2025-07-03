@@ -58,8 +58,13 @@ spec:
             - |
               exec /entrypoint airflow db check-migrations --migration-wait-timeout=60
           env:
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: airflow-postgres-creds
+                  key: postgres_password
             - name: AIRFLOW__DATABASE__SQL_ALCHEMY_CONN
-              value: sqlite:////opt/airflow/airflow.db
+              value: postgresql+psycopg2://airflow_user:$(POSTGRES_PASSWORD)@devedb0-vip.medimpact.com:5432/pdp_airflow_db
       containers:
         - name: dag-processor
           image: docker-local.artifactory.medimpact.com/dockerhub/apache/airflow:slim-3.0.2
@@ -89,8 +94,17 @@ spec:
               subPath: airflow_local_settings.py
               readOnly: true
           env:
+            - name: AIRFLOW__CORE__EXECUTOR
+              value: CeleryExecutor
+            - name: AIRFLOW__CORE__LOAD_EXAMPLES
+              value: "False"
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: airflow-postgres-creds
+                  key: postgres_password
             - name: AIRFLOW__DATABASE__SQL_ALCHEMY_CONN
-              value: sqlite:////opt/airflow/airflow.db
+              value: postgresql+psycopg2://airflow_user:$(POSTGRES_PASSWORD)@devedb0-vip.medimpact.com:5432/pdp_airflow_db
             - name: REDIS_PASSWORD # Add REDIS_PASSWORD env var
               valueFrom:
                 secretKeyRef:
